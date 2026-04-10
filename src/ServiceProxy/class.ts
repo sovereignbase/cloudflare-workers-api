@@ -9,13 +9,6 @@ export class ServiceProxy extends DurableObject<Env> {
       maxNetworkRetries: 2,
     });
   }
-  async relay(topic: string, payload: unknown): Promise<void> {
-    for (const subscription of this.subscriptions) {
-      void this.userProxy
-        .get(this.userProxy.idFromString(subscription))
-        .deliver();
-    }
-  }
   async backup(topic: string, payload: unknown): Promise<void> {
     // fanout / broadcast
   }

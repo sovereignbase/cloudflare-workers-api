@@ -17,7 +17,9 @@ export class ProxyResolver extends OpenAPIRoute {
         "sec-websocket-key": z.string().min(1),
         "sec-websocket-version": z.literal("13"),
       }),
-      params: z.object({}),
+      params: z.object({
+        id: z.string().min(64),
+      }),
     },
     responses: {
       "101": { description: "WebSocket upgrade" },
@@ -37,9 +39,6 @@ export class ProxyResolver extends OpenAPIRoute {
 
   async handle(context: AppContext) {
     const validated = await this.getValidatedData<typeof this.schema>();
-
-    const origin = validated.headers.origin.toLowerCase();
-    const connectingIP = validated.headers["cf-connecting-ip"].toLowerCase();
     const upgrade = validated.headers.upgrade.toLowerCase();
     const connection = validated.headers.connection.toLowerCase();
     if (upgrade !== "websocket" || !connection.includes("upgrade")) {
@@ -77,11 +76,11 @@ app.use(
 
 // Setup OpenAPI registry
 const openapi = fromHono(app, {
-  docs_url: "/docs",
+  docs_url: "/",
 });
 
 // Register OpenAPI endpoints
-openapi.get("*", ProxyResolver);
+openapi.get("/:id", ProxyResolver);
 
 // Export the Hono app
 export default app;

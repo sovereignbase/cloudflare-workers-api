@@ -7,8 +7,6 @@
     "enabled": false,
   },
   "upload_source_maps": true,
-  "minify": true,
-  "r2_buckets": [],
   "compatibility_flags": ["nodejs_compat"],
   "placement": { "mode": "smart" },
   "vars": {
@@ -33,4 +31,27 @@
       { "class_name": "ResourceProxy", "name": "RESOURCE_PROXY" },
     ],
   },
+  "r2_buckets": [
+    {
+      "remote": true,
+      "binding": "CUSTOMER_DATA",
+      "bucket_name": "customer-data",
+      "preview_bucket_name": "customer-data-preview",
+      "jurisdiction": "eu",
+    },
+    {
+      "remote": true,
+      "binding": "PRIVARE",
+      "bucket_name": "private",
+      "preview_bucket_name": "private-preview",
+      "jurisdiction": "eu",
+    },
+    {
+      "remote": true,
+      "binding": "PUBLIC",
+      "bucket_name": "public",
+      "preview_bucket_name": "public-preview",
+      "jurisdiction": "eu",
+    },
+  ],
 }
