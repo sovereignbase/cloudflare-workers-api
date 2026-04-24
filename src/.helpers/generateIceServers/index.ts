@@ -1,4 +1,7 @@
-import type { AppContext, CustomerData } from "../types.js";
+/// <reference lib="dom" />
+
+import { AppContext } from "../../.types/index.js";
+
 export async function generateIceServers(
   ctx: AppContext,
 ): Promise<RTCIceServer[] | false> {
@@ -18,20 +21,4 @@ export async function generateIceServers(
     return iceServers;
   }
   return false;
-}
-
-async function fetchCustomerData(
-  ctx: AppContext,
-  id: string,
-): Promise<CustomerData | false> {
-  const speculativePromise = ctx.env.CUSTOMER_DATA.head(id);
-  let data = await caches.default.match(
-    `https://cache.sovereignbase.dev/${id}`,
-  );
-  if (!data) {
-    if (!(await speculativePromise)) return false;
-    data = await ctx.env.CUSTOMER_DATA.get(id);
-    data.json();
-  }
-  return data as CustomerData;
 }

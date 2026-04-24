@@ -2,7 +2,7 @@ import type { Context } from "hono";
 
 export type AppContext = Context<{ Bindings: Env }>;
 
-export type CustomerData = {
+export type BillingData = {
   id: string;
-  allowedOrigins: [];
+  allowedOrigins: string[];
 };

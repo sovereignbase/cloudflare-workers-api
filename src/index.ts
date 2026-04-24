@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { fromHono, OpenAPIRoute } from "chanfana";
-import type { AppContext } from "./types.js";
+import type { AppContext } from "./.types/index.js";
+import { fetchBillingData, isAllowedOrigin } from "./.helpers/index.js";
 
 export class ProxyResolver extends OpenAPIRoute {
   schema = {
@@ -23,8 +23,8 @@ export class ProxyResolver extends OpenAPIRoute {
     },
     responses: {
       "101": { description: "WebSocket upgrade" },
-      "400": {
-        description: "Not a WebSocket handshake",
+      "404": {
+        description: "Not found.",
         content: {
           "application/json": {
             schema: z.object({
@@ -39,17 +39,20 @@ export class ProxyResolver extends OpenAPIRoute {
 
   async handle(context: AppContext) {
     const validated = await this.getValidatedData<typeof this.schema>();
+    const id = validated.params.id;
+
+    const billing = await fetchBillingData(context, id);
+    if (!billing) return context.text("Not found", 404);
+
+    const origin = validated.headers.origin.toLowerCase();
+    if (!isAllowedOrigin(origin, billing.allowedOrigins))
+      return context.text("Not found", 404);
+
     const upgrade = validated.headers.upgrade.toLowerCase();
     const connection = validated.headers.connection.toLowerCase();
-    if (upgrade !== "websocket" || !connection.includes("upgrade")) {
-      return context.json(
-        {
-          ok: false,
-          error: "Expected a WebSocket handshake (Upgrade headers).",
-        },
-        400,
-      );
-    }
+    if (upgrade !== "websocket" || !connection.includes("upgrade"))
+      return context.text("Not found", 404);
+
     return context.env.USER_PROXY.get(
       context.env.USER_PROXY.newUniqueId(),
     ).fetch(context.req.raw);
@@ -58,21 +61,6 @@ export class ProxyResolver extends OpenAPIRoute {
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
-
-app.use(
-  "*",
-  cors({
-    credentials: false,
-    allowMethods: ["GET"],
-    origin: ["*"],
-    allowHeaders: [
-      "upgrade",
-      "connection",
-      "sec-websocket-key",
-      "sec-websocket-version",
-    ],
-  }),
-);
 
 // Setup OpenAPI registry
 const openapi = fromHono(app, {
@@ -86,4 +74,3 @@ openapi.get("/:id", ProxyResolver);
 export default app;
 export { UserProxy } from "./UserProxy/class.js";
 export { ServiceProxy } from "./ServiceProxy/class.js";
-export { ResourceProxy } from "./ResourceProxy/class.js";
