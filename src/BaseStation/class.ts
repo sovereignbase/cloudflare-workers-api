@@ -1,13 +1,13 @@
 import { encode } from "@msgpack/msgpack";
 import { DurableObject } from "cloudflare:workers";
 import { ActorMessageHandler } from "@sovereignbase/actor-message-handler";
-import { generateIceServers } from "../.helpers";
+import { blockIPAddress, generateIceServers } from "../.helpers";
 import { BaseStationMessage } from "../.types";
 import Stripe from "stripe";
 
 export class BaseStation extends DurableObject<Env> {
   private ipAddress: string;
-  private billingId: string;
+  private clientId: string;
   private stripe: Stripe;
   private actor: WebSocket;
 
@@ -20,37 +20,19 @@ export class BaseStation extends DurableObject<Env> {
     void this.ctx.waitUntil(
       (async () => {
         this.ipAddress = request.headers.get("cf-connecting-ip") ?? "";
-        this.billingId = new URL(request.url).pathname.slice(1)[0];
+        this.clientId = new URL(request.url).pathname.slice(1)[0];
 
         void ActorMessageHandler.addEventListener(
           "violation",
           async ({ detail }) => {
             void this.actor.close();
 
-            const token = await this.env.IP_BLOCK_TOKEN.get();
-
-            const res = await fetch(
-              `https://api.cloudflare.com/client/v4/zones/${this.env.ZONE_ID}/firewall/access_rules/rules`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  mode: "block",
-                  configuration: {
-                    target: "ip",
-                    value: this.ipAddress,
-                  },
-                  notes: detail,
-                }),
-              },
+            const ruleId = await blockIPAddress(
+              this.env,
+              this.ipAddress,
+              detail,
             );
-
-            const json = await res.json<{ result: { id: string } }>();
-
-            void (await this.ctx.storage.put("ruleId", json.result.id));
+            void (await this.ctx.storage.put("ruleId", ruleId));
 
             void (await this.ctx.storage.setAlarm(Date.now() + 60_000));
           },

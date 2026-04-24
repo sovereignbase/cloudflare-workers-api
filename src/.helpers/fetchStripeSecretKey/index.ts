@@ -13,9 +13,6 @@ export async function fetchStripeSecretKey(
   ctx: AppContext["executionCtx"],
   clientId: OpaqueIdentifier,
 ): Promise<string | false> {
-  if (clientId === env.ADMIN_ID)
-    return (await env.STRIPE_SECRET_KEY.get()) as string;
-
   const objectKey = `/stripe/${clientId}`;
 
   const speculativePromise = env.SECRETS.head(objectKey);
