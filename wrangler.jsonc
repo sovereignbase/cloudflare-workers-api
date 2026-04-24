@@ -11,6 +11,7 @@
   "placement": { "mode": "smart" },
   "vars": {
     "TURN_TOKEN_ID": "9caaf205b3bd9baeb3040852b39e9067",
+    "ADMIN_ID": "QtLw1gdDIiLYl_TdpIN-7dp4Mx8WJnLFR3suaQ_yHvTeINMQMgwvC22iJLLYZ_SU",
     "ZONE_ID": "927e863b1e27ec5d200732db0c910b4d",
   },
   "secrets_store_secrets": [
@@ -59,6 +60,12 @@
       "remote": true,
       "binding": "PROFILES",
       "bucket_name": "profiles",
+      "jurisdiction": "eu",
+    },
+    {
+      "remote": true,
+      "binding": "SECRETS",
+      "bucket_name": "secrets",
       "jurisdiction": "eu",
     },
   ],

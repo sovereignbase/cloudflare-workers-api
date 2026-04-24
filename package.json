@@ -3,10 +3,6 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
-    "cf-typegen": "wrangler types",
     "build": "tsup && typedoc"
   },
   "dependencies": {

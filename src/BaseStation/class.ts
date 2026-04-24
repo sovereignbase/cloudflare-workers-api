@@ -3,10 +3,12 @@ import { DurableObject } from "cloudflare:workers";
 import { ActorMessageHandler } from "@sovereignbase/actor-message-handler";
 import { generateIceServers } from "../.helpers";
 import { BaseStationMessage } from "../.types";
+import Stripe from "stripe";
 
 export class BaseStation extends DurableObject<Env> {
   private ipAddress: string;
   private billingId: string;
+  private stripe: Stripe;
   private actor: WebSocket;
 
   async fetch(request: Request): Promise<Response> {
