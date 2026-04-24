@@ -11,6 +11,7 @@
   "placement": { "mode": "smart" },
   "vars": {
     "TURN_TOKEN_ID": "9caaf205b3bd9baeb3040852b39e9067",
+    "ZONE_ID": "927e863b1e27ec5d200732db0c910b4d",
   },
   "secrets_store_secrets": [
     {
@@ -22,6 +23,11 @@
       "store_id": "3dca4165b3fa04ce8a41977479759c55",
       "secret_name": "STRIPE_SECRET_KEY",
       "binding": "STRIPE_SECRET_KEY",
+    },
+    {
+      "store_id": "3dca4165b3fa04ce8a41977479759c55",
+      "secret_name": "IP_BLOCK_TOKEN",
+      "binding": "IP_BLOCK_TOKEN",
     },
   ],
   "durable_objects": {
@@ -36,21 +42,18 @@
       "remote": true,
       "binding": "BILLING",
       "bucket_name": "billing",
-      "preview_bucket_name": "billing-preview",
       "jurisdiction": "eu",
     },
     {
       "remote": true,
       "binding": "RESOURCES",
       "bucket_name": "resources",
-      "preview_bucket_name": "resources-preview",
       "jurisdiction": "eu",
     },
     {
       "remote": true,
       "binding": "PROFILES",
       "bucket_name": "profiles",
-      "preview_bucket_name": "profiles-preview",
       "jurisdiction": "eu",
     },
   ],

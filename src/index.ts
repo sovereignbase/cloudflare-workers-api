@@ -72,5 +72,5 @@ openapi.get("/:id", ProxyResolver);
 
 // Export the Hono app
 export default app;
-export { UserProxy } from "./UserProxy/class.js";
+export { BaseStation } from "./BaseStation/class.js";
 export { ServiceProxy } from "./ServiceProxy/class.js";
