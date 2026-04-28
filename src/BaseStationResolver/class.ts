@@ -3,6 +3,7 @@ import { OpenAPIRoute } from 'chanfana'
 import type { AppContext } from '../.types/types.js'
 import { fetchClientConfig, isAllowedOrigin } from '../.helpers/index.js'
 import { Cryptographic } from '@sovereignbase/cryptosuite'
+import { env } from 'process'
 
 /**
  * OpenAPI route that resolves and upgrades ANBS base station client sessions.
@@ -56,37 +57,45 @@ export class BaseStationResolver extends OpenAPIRoute {
    */
   async handle(context: AppContext) {
     const validated = await this.getValidatedData<typeof this.schema>()
+    const connection = validated.headers.connection.toLowerCase()
+    const upgrade = validated.headers.upgrade.toLowerCase()
+    const origin = validated.headers.origin.toLowerCase()
+
     const clientId = validated.params.clientId
 
     const stub = context.env.BASE_STATION.get(
       context.env.BASE_STATION.newUniqueId()
     )
 
-    const billing = await fetchClientConfig(
+    if (
+      !Cryptographic.identifier.validate(clientId) ||
+      upgrade !== 'websocket' ||
+      !connection.includes('upgrade')
+    ) {
+      void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
+      return context.text('Not found', 404)
+    }
+
+    if (clientId === env.ADMIN_CLIENT_ID) {
+      if (
+        !isAllowedOrigin(
+          origin,
+          JSON.parse(env.ADMIN_ALLOWED_ORIGINS) as readonly string[]
+        )
+      ) {
+        void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
+        return context.text('Not found', 404)
+      }
+      return stub.fetch(context.req.raw)
+    }
+
+    const config = await fetchClientConfig(
       context.env,
       context.executionCtx,
       clientId
     )
 
-    if (!billing) {
-      void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
-      return context.text('Not found', 404)
-    }
-
-    if (!Cryptographic.identifier.validate(billing.clientId)) {
-      void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
-      return context.text('Not found', 404)
-    }
-
-    const origin = validated.headers.origin.toLowerCase()
-    if (!isAllowedOrigin(origin, billing.allowedOrigins)) {
-      void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
-      return context.text('Not found', 404)
-    }
-
-    const upgrade = validated.headers.upgrade.toLowerCase()
-    const connection = validated.headers.connection.toLowerCase()
-    if (upgrade !== 'websocket' || !connection.includes('upgrade')) {
+    if (!config || !isAllowedOrigin(origin, config.allowedOrigins)) {
       void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
       return context.text('Not found', 404)
     }

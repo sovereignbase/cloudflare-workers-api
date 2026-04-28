@@ -11,7 +11,12 @@
   "placement": { "mode": "smart" },
   "vars": {
     "TURN_TOKEN_ID": "9caaf205b3bd9baeb3040852b39e9067",
-    "ADMIN_ID": "QtLw1gdDIiLYl_TdpIN-7dp4Mx8WJnLFR3suaQ_yHvTeINMQMgwvC22iJLLYZ_SU",
+    "ADMIN_CLIENT_ID": "QtLw1gdDIiLYl_TdpIN-7dp4Mx8WJnLFR3suaQ_yHvTeINMQMgwvC22iJLLYZ_SU",
+    "ADMIN_ALLOWED_ORIGINS": [
+      "https://*.sovereignbase.dev",
+      "http://localhost:5500",
+      "http://127.0.0.1:5500",
+    ],
     "ZONE_ID": "927e863b1e27ec5d200732db0c910b4d",
   },
   "secrets_store_secrets": [

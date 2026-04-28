@@ -20,7 +20,7 @@ export async function fetchClientConfig(
   const speculativePromise = env.BILLING.head(clientId)
 
   const cacheKey = new Request(
-    `https://cache.sovereignbase.dev/billing/${clientId}`
+    `https://cache.sovereignbase.dev/client-config/${clientId}`
   )
   const cache = (caches as CacheStorage & { default: Cache }).default
 

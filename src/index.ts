@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { fromHono } from 'chanfana'
+import { cors } from 'hono/cors'
 import { BaseStationResolver } from './BaseStationResolver/class.js'
 
 /**
@@ -9,6 +10,8 @@ import { BaseStationResolver } from './BaseStationResolver/class.js'
  * delegates accepted WebSocket sessions to the `BaseStation` Durable Object.
  */
 const app = new Hono<{ Bindings: Env }>()
+
+app.use(cors({ origin: '*' }))
 
 /**
  * OpenAPI-aware Hono registry used to document the base station route.
