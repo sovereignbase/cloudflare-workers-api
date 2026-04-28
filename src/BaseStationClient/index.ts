@@ -1,7 +1,7 @@
 import { encode } from '@msgpack/msgpack'
 import type {
   BaseStationMessage,
-  BaseStationClientTransactMessage,
+  BaseStationClientTransactInput,
   BaseStationClientEventListenerFor,
   BaseStationClientPendingTransact,
   BaseStationClientTransactOptions,
@@ -148,7 +148,8 @@ export class BaseStationClient {
    * `false` when the request cannot be issued.
    */
   transact(
-    message: Omit<BaseStationClientTransactMessage, 'id'>,
+    kind: BaseStationClientTransactInput['kind'],
+    detail: BaseStationClientTransactInput['detail'],
     options: BaseStationClientTransactOptions = {}
   ): Promise<BaseStationMessage | false> {
     if (this.isClosed) return Promise.resolve(false)
@@ -198,7 +199,7 @@ export class BaseStationClient {
       }
 
       try {
-        void this.webSocket.send(encode({ id, ...message }))
+        void this.webSocket.send(encode({ id, kind, detail }))
       } catch {
         const pending = this.pendingTransacts.get(id)
         void this.pendingTransacts.delete(id)
@@ -264,7 +265,7 @@ export class BaseStationClient {
     )
   }
 }
-new BaseStationClient('').transact({
-  kind: 'checkoutStatusGet',
-  detail: { invoiceId: '' },
+
+new BaseStationClient('').transact('checkoutStatusGet', {
+  invoiceId: '',
 })

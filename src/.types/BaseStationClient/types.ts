@@ -107,6 +107,21 @@ export type BaseStationClientTransactMessage = Extract<
   | { kind: 'checkoutStatusGet' }
 >
 
+type DistributiveOmit<T, K extends keyof any> = T extends unknown
+  ? Omit<T, K>
+  : never
+
+/**
+ * Public transaction input accepted by `BaseStationClient.transact`.
+ *
+ * The client generates the transaction id, so callers provide the transaction
+ * message without its internal `id` field.
+ */
+export type BaseStationClientTransactInput = DistributiveOmit<
+  BaseStationClientTransactMessage,
+  'id'
+>
+
 /**
  * ANBS client message kinds that just fire and forget.
  */
