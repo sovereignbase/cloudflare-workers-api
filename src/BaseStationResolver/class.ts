@@ -23,7 +23,6 @@ export class BaseStationResolver extends OpenAPIRoute {
         origin: z.string(),
         upgrade: z.string(),
         connection: z.string(),
-        'cf-connecting-ip': z.string(),
         'sec-websocket-key': z.string().min(1),
         'sec-websocket-version': z.literal('13'),
       }),
@@ -59,6 +58,10 @@ export class BaseStationResolver extends OpenAPIRoute {
     const connection = validated.headers.connection.toLowerCase()
     const upgrade = validated.headers.upgrade.toLowerCase()
     const origin = validated.headers.origin.toLowerCase()
+    const ipAddress =
+      context.req.raw.headers.get('cf-connecting-ip') ??
+      context.req.raw.headers.get('x-forwarded-for') ??
+      ''
 
     const clientId = validated.params.clientId
 
@@ -71,13 +74,13 @@ export class BaseStationResolver extends OpenAPIRoute {
       upgrade !== 'websocket' ||
       !connection.includes('upgrade')
     ) {
-      void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
+      void stub.rateLimitIP(ipAddress)
       return context.text('Not found', 404)
     }
 
     if (clientId === context.env.ADMIN_CLIENT_ID) {
       if (!isAllowedOrigin(origin, context.env.ADMIN_ALLOWED_ORIGINS)) {
-        void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
+        void stub.rateLimitIP(ipAddress)
         return context.text('Not found', 404)
       }
       return stub.fetch(context.req.raw)
@@ -90,7 +93,7 @@ export class BaseStationResolver extends OpenAPIRoute {
     )
 
     if (!config || !isAllowedOrigin(origin, config.allowedOrigins)) {
-      void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
+      void stub.rateLimitIP(ipAddress)
       return context.text('Not found', 404)
     }
 

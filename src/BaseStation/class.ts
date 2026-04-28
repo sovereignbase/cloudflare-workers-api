@@ -37,7 +37,10 @@ export class BaseStation extends DurableObject<Env> {
 
     void this.ctx.waitUntil(
       void (async () => {
-        this.ipAddress = request.headers.get('cf-connecting-ip')
+        this.ipAddress =
+          request.headers.get('cf-connecting-ip') ??
+          request.headers.get('x-forwarded-for') ??
+          ''
         this.clientId = new URL(request.url).pathname.slice(1)[0]
 
         //VIOLATION HANDLER
