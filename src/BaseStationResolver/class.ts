@@ -3,7 +3,6 @@ import { OpenAPIRoute } from 'chanfana'
 import type { AppContext } from '../.types/types.js'
 import { fetchClientConfig, isAllowedOrigin } from '../.helpers/index.js'
 import { Cryptographic } from '@sovereignbase/cryptosuite'
-import { env } from 'process'
 
 /**
  * OpenAPI route that resolves and upgrades ANBS base station client sessions.
@@ -76,13 +75,8 @@ export class BaseStationResolver extends OpenAPIRoute {
       return context.text('Not found', 404)
     }
 
-    if (clientId === env.ADMIN_CLIENT_ID) {
-      if (
-        !isAllowedOrigin(
-          origin,
-          JSON.parse(env.ADMIN_ALLOWED_ORIGINS) as readonly string[]
-        )
-      ) {
+    if (clientId === context.env.ADMIN_CLIENT_ID) {
+      if (!isAllowedOrigin(origin, context.env.ADMIN_ALLOWED_ORIGINS)) {
         void stub.rateLimitIP(validated.headers['cf-connecting-ip'])
         return context.text('Not found', 404)
       }

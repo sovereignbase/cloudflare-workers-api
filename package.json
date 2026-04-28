@@ -2,8 +2,29 @@
   "name": "@sovereignbase/base-station",
   "version": "0.0.1",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "sideEffects": false,
   "scripts": {
-    "build": "tsup && typedoc",
+    "build": "tsup && typedoc && node in-browser-testing-build.js",
     "format": "prettier . --write"
   },
   "dependencies": {
@@ -22,6 +43,6 @@
     "tsup": "^8.5.1",
     "typedoc": "^0.28.19",
     "typescript": "^5.9.3",
-    "wrangler": "^4.85.0"
+    "wrangler": "^4.86.0"
   }
 }
