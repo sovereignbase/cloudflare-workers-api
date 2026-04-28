@@ -137,16 +137,16 @@ class.ts
 Pattern:
 
 ```ts
-export type PackageNameCode = "SOME_ERROR_CODE" | "ANOTHER_ERROR_CODE";
+export type PackageNameCode = 'SOME_ERROR_CODE' | 'ANOTHER_ERROR_CODE'
 
 export class PackageNameError extends Error {
-  readonly code: PackageNameCode;
+  readonly code: PackageNameCode
 
   constructor(code: PackageNameCode, message?: string) {
-    const detail = message ?? code;
-    super(`{@scope/package-name} ${detail}`);
-    this.code = code;
-    this.name = "PackageNameError";
+    const detail = message ?? code
+    super(`{@scope/package-name} ${detail}`)
+    this.code = code
+    this.name = 'PackageNameError'
   }
 }
 ```

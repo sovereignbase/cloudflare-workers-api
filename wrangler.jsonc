@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "base-station-v1",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "compatibility_date": "2026-04-10",
   "observability": {
     "enabled": true,
@@ -37,11 +37,7 @@
     },
   ],
   "durable_objects": {
-    "bindings": [
-      { "class_name": "BaseStation", "name": "BASE_STATION" },
-      { "class_name": "ServiceProxy", "name": "SERVICE_PROXY" },
-      { "class_name": "ResourceProxy", "name": "RESOURCE_PROXY" },
-    ],
+    "bindings": [{ "class_name": "BaseStation", "name": "BASE_STATION" }],
   },
   "r2_buckets": [
     {

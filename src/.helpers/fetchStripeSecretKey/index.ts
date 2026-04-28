@@ -1,65 +1,74 @@
 import {
   Cryptographic,
   type OpaqueIdentifier,
-} from "@sovereignbase/cryptosuite";
-import { Bytes } from "@sovereignbase/bytecodec";
-import type { AppContext } from "../../.types/index.js";
-import { decode } from "@msgpack/msgpack";
+} from '@sovereignbase/cryptosuite'
+import { Bytes } from '@sovereignbase/bytecodec'
+import type { AppContext } from '../../.types/index.js'
+import { decode } from '@msgpack/msgpack'
 
-let baseKey: Base64URLString | undefined;
+let baseKey: Base64URLString | undefined
 
+/**
+ * Resolves and decrypts the Stripe secret key for an ANBS client.
+ *
+ * @param env The Cloudflare Worker environment bindings.
+ * @param ctx The Worker or Durable Object execution context used for cache writes.
+ * @param clientId The opaque ANBS client identifier.
+ * @returns The decrypted Stripe secret key, or `false` when it is unavailable.
+ */
 export async function fetchStripeSecretKey(
-  env: AppContext["env"],
-  ctx: AppContext["executionCtx"] | DurableObjectState<{}>,
-  clientId: OpaqueIdentifier,
+  env: AppContext['env'],
+  ctx: AppContext['executionCtx'] | DurableObjectState<{}>,
+  clientId: OpaqueIdentifier
 ): Promise<string | false> {
-  const objectKey = `/stripe/${clientId}`;
+  const objectKey = `/stripe/${clientId}`
 
-  const speculativePromise = env.SECRETS.head(objectKey);
+  const speculativePromise = env.SECRETS.head(objectKey)
 
   const cacheKey = new Request(
-    `https://cache.sovereignbase.dev/secrets${objectKey}`,
-  );
+    `https://cache.sovereignbase.dev/secrets${objectKey}`
+  )
 
-  const cache = (caches as CacheStorage & { default: Cache }).default;
+  const cache = (caches as CacheStorage & { default: Cache }).default
 
-  const baseKeyPromise =
-    baseKey ? Promise.resolve(baseKey) : await env.SUPER_SECRET_KEY.get();
+  const baseKeyPromise = baseKey
+    ? Promise.resolve(baseKey)
+    : await env.SUPER_SECRET_KEY.get()
 
-  let stripeSK: ArrayBuffer;
+  let stripeSK: ArrayBuffer
 
-  const cached = await cache.match(cacheKey);
+  const cached = await cache.match(cacheKey)
 
   if (cached) {
-    stripeSK = await cached.arrayBuffer();
+    stripeSK = await cached.arrayBuffer()
   } else {
-    if (!(await speculativePromise)) return false;
+    if (!(await speculativePromise)) return false
 
-    const object = await env.SECRETS.get(objectKey);
-    if (!object) return false;
+    const object = await env.SECRETS.get(objectKey)
+    if (!object) return false
 
-    stripeSK = await object.arrayBuffer();
+    stripeSK = await object.arrayBuffer()
 
     const response = new Response(stripeSK, {
       headers: {
-        "content-type": "application/msgpack",
-        "cache-control": "public, max-age=31536000, immutable",
+        'content-type': 'application/msgpack',
+        'cache-control': 'public, max-age=31536000, immutable',
       },
-    });
+    })
 
-    ctx.waitUntil(cache.put(cacheKey, response));
+    ctx.waitUntil(cache.put(cacheKey, response))
   }
 
-  const resolvedBaseKey = (await baseKeyPromise) as Base64URLString;
-  if (!resolvedBaseKey) return false;
+  const resolvedBaseKey = (await baseKeyPromise) as Base64URLString
+  if (!resolvedBaseKey) return false
 
   const decoded = decode(stripeSK) as {
-    iv: Uint8Array;
-    salt: Uint8Array;
-    ciphertext: ArrayBuffer;
-  };
+    iv: Uint8Array
+    salt: Uint8Array
+    ciphertext: ArrayBuffer
+  }
 
-  const { iv, salt, ciphertext } = decoded;
+  const { iv, salt, ciphertext } = decoded
 
   if (
     !(iv instanceof Uint8Array) ||
@@ -68,18 +77,18 @@ export async function fetchStripeSecretKey(
     salt.byteLength !== 16 ||
     !(ciphertext instanceof ArrayBuffer)
   ) {
-    return false;
+    return false
   }
 
   const { cipherKey } = await Cryptographic.cipherMessage.deriveKey(
     Bytes.fromBase64UrlString(resolvedBaseKey),
-    { salt },
-  );
+    { salt }
+  )
 
   const plaintext = await Cryptographic.cipherMessage.decrypt(cipherKey, {
     iv,
     ciphertext,
-  });
+  })
 
-  return Bytes.toString(plaintext);
+  return Bytes.toString(plaintext)
 }
