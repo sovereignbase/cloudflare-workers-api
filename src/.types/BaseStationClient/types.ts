@@ -107,6 +107,22 @@ export type BaseStationClientTransactMessage = Extract<
   | { kind: 'checkoutStatusGet' }
 >
 
+export type BaseStationClientTransactResponse<
+  K extends BaseStationClientTransactMessage['kind'],
+> = K extends 'iceServersGet'
+  ? Extract<BaseStationMessage, { kind: 'iceServers' }>['detail']['iceServers']
+  : K extends 'invoiceStatusGet'
+    ? Extract<
+        BaseStationMessage,
+        { kind: 'invoiceStatus' }
+      >['detail']['invoiceStatus']
+    : K extends 'checkoutStatusGet'
+      ? Extract<
+          BaseStationMessage,
+          { kind: 'checkoutStatus' }
+        >['detail']['checkoutStatus']
+      : never
+
 /**
  * ANBS client message kinds that just fire and forget.
  */

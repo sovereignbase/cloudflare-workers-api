@@ -1,12 +1,12 @@
 import { encode } from '@msgpack/msgpack'
 import type {
-  BaseStationMessage,
   BaseStationClientEventListenerFor,
   BaseStationClientPendingTransact,
   BaseStationClientTransactOptions,
   BaseStationClientEventMap,
   BaseStationClientInvokeMessage,
   BaseStationClientTransactMessage,
+  BaseStationClientTransactResponse,
 } from '../.types/types.js'
 import { BaseStationMessageHandler } from '../BaseStationMessageHandler/class.js'
 
@@ -25,9 +25,8 @@ export class BaseStationClient {
   private readonly pendingTransacts = new Map<
     string,
     BaseStationClientPendingTransact<
-      Omit<
-        BaseStationClientEventMap[keyof BaseStationClientEventMap]['detail'],
-        'id'
+      BaseStationClientTransactResponse<
+        BaseStationClientTransactMessage['kind']
       >
     >
   >()
@@ -140,73 +139,68 @@ export class BaseStationClient {
     kind: K,
     detail: Extract<BaseStationClientTransactMessage, { kind: K }>['detail'],
     options: BaseStationClientTransactOptions = {}
-  ): Promise<
-    | Omit<
-        BaseStationClientEventMap[keyof BaseStationClientEventMap]['detail'],
-        'id'
-      >
-    | false
-  > {
+  ): Promise<BaseStationClientTransactResponse<K> | false> {
     if (this.isClosed) return Promise.resolve(false)
     const id = globalThis.crypto.randomUUID()
     const { signal, ttlMs } = options
 
-    return new Promise<
-      Omit<
-        BaseStationClientEventMap[keyof BaseStationClientEventMap]['detail'],
-        'id'
-      >
-    >((resolve, reject) => {
-      let timeoutId: ReturnType<typeof setTimeout> | undefined
-      const abortReason = () =>
-        signal?.reason ??
-        new DOMException('The operation was aborted.', 'AbortError')
+    return new Promise<BaseStationClientTransactResponse<K> | false>(
+      (resolve, reject) => {
+        let timeoutId: ReturnType<typeof setTimeout> | undefined
+        const abortReason = () =>
+          signal?.reason ??
+          new DOMException('The operation was aborted.', 'AbortError')
 
-      if (signal?.aborted) {
-        void reject(abortReason())
-        return
-      }
+        if (signal?.aborted) {
+          void reject(abortReason())
+          return
+        }
 
-      if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) {
-        void resolve(false)
-        return
-      }
+        if (!this.webSocket || this.webSocket.readyState !== WebSocket.OPEN) {
+          void resolve(false)
+          return
+        }
 
-      const handleAbort = () => {
-        void this.pendingTransacts.delete(id)
-        if (timeoutId) void clearTimeout(timeoutId)
-        void signal?.removeEventListener('abort', handleAbort)
-
-        void reject(abortReason())
-      }
-
-      void this.pendingTransacts.set(id, {
-        resolve,
-        reject,
-        cleanup: () => {
+        const handleAbort = () => {
+          void this.pendingTransacts.delete(id)
           if (timeoutId) void clearTimeout(timeoutId)
           void signal?.removeEventListener('abort', handleAbort)
-        },
-      })
-      void signal?.addEventListener('abort', handleAbort, { once: true })
 
-      if (ttlMs) {
-        timeoutId = setTimeout(() => {
+          void reject(abortReason())
+        }
+
+        void this.pendingTransacts.set(id, {
+          resolve: resolve as BaseStationClientPendingTransact<
+            BaseStationClientTransactResponse<
+              BaseStationClientTransactMessage['kind']
+            >
+          >['resolve'],
+          reject,
+          cleanup: () => {
+            if (timeoutId) void clearTimeout(timeoutId)
+            void signal?.removeEventListener('abort', handleAbort)
+          },
+        })
+        void signal?.addEventListener('abort', handleAbort, { once: true })
+
+        if (ttlMs) {
+          timeoutId = setTimeout(() => {
+            void this.pendingTransacts.delete(id)
+            void signal?.removeEventListener('abort', handleAbort)
+            void resolve(false)
+          }, ttlMs)
+        }
+
+        try {
+          void this.webSocket.send(encode({ kind, detail: { id, ...detail } }))
+        } catch {
+          const pending = this.pendingTransacts.get(id)
           void this.pendingTransacts.delete(id)
-          void signal?.removeEventListener('abort', handleAbort)
+          void pending?.cleanup()
           void resolve(false)
-        }, ttlMs)
+        }
       }
-
-      try {
-        void this.webSocket.send(encode({ id, kind, detail }))
-      } catch {
-        const pending = this.pendingTransacts.get(id)
-        void this.pendingTransacts.delete(id)
-        void pending?.cleanup()
-        void resolve(false)
-      }
-    })
+    )
   }
 
   /**
