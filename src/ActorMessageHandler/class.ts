@@ -10,7 +10,7 @@ import type {
  * ANBS actor message handler.
  */
 export class ActorMessageHandler {
-  private static readonly eventTarget: EventTarget;
+  private static readonly eventTarget = new EventTarget();
 
   /**
    * Ingests an encoded ANBS protocol message.
@@ -35,8 +35,7 @@ export class ActorMessageHandler {
     if (
       !decoded ||
       typeof decoded !== "object" ||
-      !Object.hasOwn(decoded, "kind") ||
-      !Object.hasOwn(decoded, "detail")
+      !Object.hasOwn(decoded, "kind")
     )
       return void this.eventTarget.dispatchEvent(
         new CustomEvent("violation", { detail: "Wrong message shape" }),
@@ -46,6 +45,8 @@ export class ActorMessageHandler {
       case "resourceBackup": {
         const { detail } = decoded;
         if (
+          !detail ||
+          typeof detail !== "object" ||
           !Object.hasOwn(detail, "id") ||
           !Object.hasOwn(detail, "iv") ||
           !Object.hasOwn(detail, "salt") ||
@@ -58,6 +59,7 @@ export class ActorMessageHandler {
         if (
           !Cryptographic.identifier.validate(id) ||
           !(iv instanceof Uint8Array) ||
+          !(salt instanceof Uint8Array) ||
           !(ciphertext instanceof ArrayBuffer)
         )
           return void this.eventTarget.dispatchEvent(
@@ -65,14 +67,58 @@ export class ActorMessageHandler {
           );
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent("backup", {
+          new CustomEvent("resourceBackup", {
             detail: { id, buffer: encode({ iv, salt, ciphertext }) },
           }),
         );
       }
       case "iceServers": {
+        const detail = Object.hasOwn(decoded, "detail") ? decoded.detail : {};
+        if (
+          !detail ||
+          typeof detail !== "object" ||
+          (detail.id !== undefined && typeof detail.id !== "string")
+        )
+          return void this.eventTarget.dispatchEvent(
+            new CustomEvent("violation", { detail: "Wrong message shape" }),
+          );
+
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent("iceServers"),
+          new CustomEvent("iceServers", { detail }),
+        );
+      }
+      case "invoiceStatus": {
+        const { detail } = decoded;
+        if (
+          !detail ||
+          typeof detail !== "object" ||
+          !Object.hasOwn(detail, "invoiceId") ||
+          typeof detail.invoiceId !== "string" ||
+          (detail.id !== undefined && typeof detail.id !== "string")
+        )
+          return void this.eventTarget.dispatchEvent(
+            new CustomEvent("violation", { detail: "Wrong message shape" }),
+          );
+
+        return void this.eventTarget.dispatchEvent(
+          new CustomEvent("invoiceStatus", { detail }),
+        );
+      }
+      case "checkoutStatus": {
+        const { detail } = decoded;
+        if (
+          !detail ||
+          typeof detail !== "object" ||
+          !Object.hasOwn(detail, "checkoutSessionId") ||
+          typeof detail.checkoutSessionId !== "string" ||
+          (detail.id !== undefined && typeof detail.id !== "string")
+        )
+          return void this.eventTarget.dispatchEvent(
+            new CustomEvent("violation", { detail: "Wrong message shape" }),
+          );
+
+        return void this.eventTarget.dispatchEvent(
+          new CustomEvent("checkoutStatus", { detail }),
         );
       }
     }

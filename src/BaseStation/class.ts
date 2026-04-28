@@ -48,7 +48,7 @@ export class BaseStation extends DurableObject<Env> {
         void ActorMessageHandler.addEventListener(
           "resourceBackup",
           ({ detail }) => {
-            void this.env.RESOURCES.put(`/${detail.id}`, detail.buffer, {
+            void this.env.CIPHER_STORE.put(`/${detail.id}`, detail.buffer, {
               httpMetadata: {
                 contentType: "application/msgpack",
               },
@@ -57,18 +57,21 @@ export class BaseStation extends DurableObject<Env> {
         );
 
         //ICE SERVERS REQUEST HANDLER
-        void ActorMessageHandler.addEventListener("iceServers", async () => {
-          const iceServers = await generateIceServers(this.env);
-          void this.actor.send(
-            encode([
-              "station-client-response",
-              {
+        void ActorMessageHandler.addEventListener(
+          "iceServers",
+          async ({ detail }) => {
+            const iceServers = await generateIceServers(this.env);
+            void this.actor.send(
+              encode({
                 kind: "iceServers",
-                detail: iceServers,
-              } satisfies BaseStationMessage,
-            ]),
-          );
-        });
+                detail: {
+                  id: detail.id,
+                  iceServers,
+                },
+              } satisfies BaseStationMessage),
+            );
+          },
+        );
 
         // CHECKOUT STATUS REQUEST
         void ActorMessageHandler.addEventListener(
@@ -81,13 +84,35 @@ export class BaseStation extends DurableObject<Env> {
               detail.checkoutSessionId,
             );
             void this.actor.send(
-              encode([
-                "station-client-response",
-                {
-                  kind: "checkoutStatus",
-                  detail: checkoutStatus,
-                } satisfies BaseStationMessage,
-              ]),
+              encode({
+                kind: "checkoutStatus",
+                detail: {
+                  id: detail.id,
+                  checkoutStatus,
+                },
+              } satisfies BaseStationMessage),
+            );
+          },
+        );
+
+        // INVOICE STATUS REQUEST
+        void ActorMessageHandler.addEventListener(
+          "invoiceStatus",
+          async ({ detail }) => {
+            const invoiceStatus = await fetchStripeInvoiceStatus(
+              this.ctx,
+              this.env,
+              this.clientId,
+              detail.invoiceId,
+            );
+            void this.actor.send(
+              encode({
+                kind: "invoiceStatus",
+                detail: {
+                  id: detail.id,
+                  invoiceStatus,
+                },
+              } satisfies BaseStationMessage),
             );
           },
         );

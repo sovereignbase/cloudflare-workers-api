@@ -1,5 +1,5 @@
 import { OpaqueIdentifier } from "@sovereignbase/cryptosuite";
-import type { AppContext, StripeCheckoutStatus } from "../../.types/index.js";
+import type { AppContext, StripeInvoiceStatus } from "../../.types/index.js";
 import { fetchStripeSecretKey } from "../index.js";
 
 export async function fetchStripeInvoiceStatus(
@@ -7,7 +7,7 @@ export async function fetchStripeInvoiceStatus(
   env: AppContext["env"],
   clientId: OpaqueIdentifier,
   invoiceId: string,
-): Promise<string | false> {
+): Promise<StripeInvoiceStatus | false> {
   const stripeSecretKey = await fetchStripeSecretKey(env, ctx, clientId);
   if (!stripeSecretKey) return false;
 

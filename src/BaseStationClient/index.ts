@@ -1,12 +1,14 @@
-import { encode, decode } from "@msgpack/msgpack";
+import { encode } from "@msgpack/msgpack";
 import type {
   ActorMessage,
   BaseStationMessage,
+  BaseStationClientTransactMessage,
   BaseStationClientEventListenerFor,
   BaseStationClientPendingTransact,
   BaseStationClientTransactOptions,
   BaseStationClientEventMap,
 } from "../.types/index.js";
+import { BaseStationMessageHandler } from "../BaseStationMessageHandler/class.js";
 
 /**
  * Represents a base station client that sends messages over a WebSocket transport.
@@ -14,6 +16,7 @@ import type {
  */
 export class BaseStationClient {
   private readonly eventTarget = new EventTarget();
+  private readonly messageHandler = new BaseStationMessageHandler();
   private readonly webSocketUrl: string;
   private webSocket: WebSocket | null = null;
   private isClosed: boolean = false;
@@ -42,6 +45,51 @@ export class BaseStationClient {
     socket.binaryType = "arraybuffer";
     this.webSocket = socket;
 
+    this.messageHandler.addEventListener("iceServers", ({ detail }) => {
+      const id = detail.detail.id;
+      const pending = id ? this.pendingfetchs.get(id) : undefined;
+      if (id && pending) {
+        void this.pendingfetchs.delete(id);
+        void pending.cleanup();
+        void pending.resolve(detail);
+        return;
+      }
+
+      void this.eventTarget.dispatchEvent(
+        new CustomEvent("message", { detail }),
+      );
+    });
+
+    this.messageHandler.addEventListener("checkoutStatus", ({ detail }) => {
+      const id = detail.detail.id;
+      const pending = id ? this.pendingfetchs.get(id) : undefined;
+      if (id && pending) {
+        void this.pendingfetchs.delete(id);
+        void pending.cleanup();
+        void pending.resolve(detail);
+        return;
+      }
+
+      void this.eventTarget.dispatchEvent(
+        new CustomEvent("message", { detail }),
+      );
+    });
+
+    this.messageHandler.addEventListener("invoiceStatus", ({ detail }) => {
+      const id = detail.detail.id;
+      const pending = id ? this.pendingfetchs.get(id) : undefined;
+      if (id && pending) {
+        void this.pendingfetchs.delete(id);
+        void pending.cleanup();
+        void pending.resolve(detail);
+        return;
+      }
+
+      void this.eventTarget.dispatchEvent(
+        new CustomEvent("message", { detail }),
+      );
+    });
+
     socket.onclose = () => {
       if (this.webSocket === socket) this.webSocket = null;
 
@@ -53,27 +101,7 @@ export class BaseStationClient {
     };
 
     socket.onmessage = (event: MessageEvent<ArrayBuffer>) => {
-      const message = decode(event.data);
-      if (!message) return;
-
-      if (
-        Array.isArray(message) &&
-        message[0] === "base-station-response" &&
-        typeof message[1] === "string"
-      ) {
-        const id = message[1];
-        const pending = this.pendingfetchs.get(id);
-        if (!pending) return;
-
-        void this.pendingfetchs.delete(id);
-        void pending.cleanup();
-        void pending.resolve(message[2] as BaseStationMessage);
-        return;
-      }
-
-      void this.eventTarget.dispatchEvent(
-        new CustomEvent("message", { detail: message as BaseStationMessage }),
-      );
+      void this.messageHandler.ingest(event.data);
     };
   }
 
@@ -100,7 +128,7 @@ export class BaseStationClient {
    * @returns A promise that resolves with the response message, or `false` when the request cannot be issued.
    */
   transact(
-    message: ActorMessage,
+    message: BaseStationClientTransactMessage,
     options: BaseStationClientTransactOptions = {},
   ): Promise<BaseStationMessage | false> {
     if (this.isClosed) return Promise.resolve(false);
@@ -151,9 +179,27 @@ export class BaseStationClient {
       }
 
       try {
-        void this.webSocket.send(
-          encode(["base-station-client-request", id, message]),
-        );
+        switch (message.kind) {
+          case "iceServers": {
+            void this.webSocket.send(
+              encode({
+                ...message,
+                detail: { ...message.detail, id },
+              }),
+            );
+            break;
+          }
+          case "checkoutStatus":
+          case "invoiceStatus": {
+            void this.webSocket.send(
+              encode({
+                ...message,
+                detail: { ...message.detail, id },
+              }),
+            );
+            break;
+          }
+        }
       } catch {
         const pending = this.pendingfetchs.get(id);
         void this.pendingfetchs.delete(id);

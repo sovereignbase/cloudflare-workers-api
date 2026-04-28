@@ -15,15 +15,24 @@ export type ClientConfig = {
 export type BaseStationMessage =
   | {
       kind: "iceServers";
-      detail: RTCIceServer[] | false;
+      detail: {
+        id?: string;
+        iceServers: RTCIceServer[] | false;
+      };
     }
   | {
       kind: "checkoutStatus";
-      detail: false | StripeCheckoutStatus;
+      detail: {
+        id?: string;
+        checkoutStatus: false | StripeCheckoutStatus;
+      };
     }
   | {
       kind: "invoiceStatus";
-      detail: false | StripeInvoiceStatus;
+      detail: {
+        id?: string;
+        invoiceStatus: false | StripeInvoiceStatus;
+      };
     };
 
 export type StripeCheckoutStatus = "paid" | "unpaid" | "no_payment_required";
@@ -49,9 +58,19 @@ export type ActorMessage =
         ciphertext: ArrayBuffer;
       };
     }
+  | { kind: "iceServers"; detail?: { id?: string } }
+  | { kind: "invoiceStatus"; detail: { id?: string; invoiceId: string } }
+  | {
+      kind: "checkoutStatus";
+      detail: { id?: string; checkoutSessionId: string };
+    };
+
+export type BaseStationClientTransactMessage = Extract<
+  ActorMessage,
   | { kind: "iceServers" }
-  | { kind: "invoiceStatus"; detail: { invoiceId: string } }
-  | { kind: "checkoutStatus"; detail: { checkoutSessionId: string } };
+  | { kind: "invoiceStatus" }
+  | { kind: "checkoutStatus" }
+>;
 
 /**
  * Maps event names to their `CustomEvent.detail` payloads.
@@ -62,9 +81,9 @@ export type ActorMessageHandlerEventMap = {
     id: OpaqueIdentifier;
     buffer: Uint8Array<ArrayBuffer>;
   };
-  iceServers: undefined;
-  invoiceStatus: { invoiceId: string };
-  checkoutStatus: { checkoutSessionId: string };
+  iceServers: { id?: string };
+  invoiceStatus: { id?: string; invoiceId: string };
+  checkoutStatus: { id?: string; checkoutSessionId: string };
 };
 
 /**
@@ -90,15 +109,32 @@ export type BaseStationClientEventMap = {
   message: CustomEvent<BaseStationMessage>;
 };
 
+export type BaseStationMessageHandlerEventMap = {
+  iceServers: CustomEvent<Extract<BaseStationMessage, { kind: "iceServers" }>>;
+  checkoutStatus: CustomEvent<
+    Extract<BaseStationMessage, { kind: "checkoutStatus" }>
+  >;
+  invoiceStatus: CustomEvent<
+    Extract<BaseStationMessage, { kind: "invoiceStatus" }>
+  >;
+};
+
+export type BaseStationMessageHandlerEventListener<
+  K extends keyof BaseStationMessageHandlerEventMap,
+> =
+  | ((event: BaseStationMessageHandlerEventMap[K]) => void)
+  | { handleEvent(event: BaseStationMessageHandlerEventMap[K]): void };
+
+export type BaseStationMessageHandlerEventListenerFor<K extends string> =
+  K extends keyof BaseStationMessageHandlerEventMap ?
+    BaseStationMessageHandlerEventListener<K>
+  : EventListenerOrEventListenerObject;
+
 export type BaseStationClientEventListenerFor<
   K extends keyof BaseStationClientEventMap,
 > =
   | ((event: BaseStationClientEventMap[K]) => void)
   | { handleEvent(event: BaseStationClientEventMap[K]): void };
-
-export type BaseStationClientRemoteMessageShape<T> =
-  | T
-  | ["station-client-request", string, T];
 
 export type BaseStationClientPendingTransact<T> = {
   resolve: (message: T | false) => void;

@@ -52,8 +52,8 @@
     },
     {
       "remote": true,
-      "binding": "RESOURCES",
-      "bucket_name": "resources",
+      "binding": "CIPHER_STORE",
+      "bucket_name": "cipher-store",
       "jurisdiction": "eu",
     },
     {

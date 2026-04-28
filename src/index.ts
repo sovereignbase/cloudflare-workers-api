@@ -14,4 +14,6 @@ openapi.get("/:clientId", BaseStationResolver);
 export default app;
 export { BaseStationResolver };
 export { BaseStation } from "./BaseStation/class.js";
+export { BaseStationClient } from "./BaseStationClient/index.js";
 export { ActorMessageHandler } from "./ActorMessageHandler/class.js";
+export { BaseStationMessageHandler } from "./BaseStationMessageHandler/class.js";
