@@ -1,12 +1,12 @@
 import { encode } from '@msgpack/msgpack'
 import type {
   BaseStationMessage,
-  BaseStationClientTransactInput,
   BaseStationClientEventListenerFor,
   BaseStationClientPendingTransact,
   BaseStationClientTransactOptions,
   BaseStationClientEventMap,
   BaseStationClientInvokeMessage,
+  BaseStationClientTransactMessage,
 } from '../.types/types.js'
 import { BaseStationMessageHandler } from '../BaseStationMessageHandler/class.js'
 
@@ -147,9 +147,9 @@ export class BaseStationClient {
    * @returns A promise that resolves with the matching response message, or
    * `false` when the request cannot be issued.
    */
-  transact(
-    kind: BaseStationClientTransactInput['kind'],
-    detail: BaseStationClientTransactInput['detail'],
+  transact<K extends BaseStationClientTransactMessage['kind']>(
+    kind: K,
+    detail: Extract<BaseStationClientTransactMessage, { kind: K }>['detail'],
     options: BaseStationClientTransactOptions = {}
   ): Promise<BaseStationMessage | false> {
     if (this.isClosed) return Promise.resolve(false)
@@ -265,7 +265,3 @@ export class BaseStationClient {
     )
   }
 }
-
-new BaseStationClient('').transact('checkoutStatusGet', {
-  invoiceId: '',
-})
