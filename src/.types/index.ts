@@ -83,3 +83,34 @@ export type ActorMessageHandlerEventListenerFor<K extends string> =
   K extends keyof ActorMessageHandlerEventMap ?
     ActorMessageHandlerEventListener<K>
   : EventListenerOrEventListenerObject;
+
+/////////////////////////////////////////////////////
+
+export type BaseStationClientEventMap<T> = {
+  message: CustomEvent<T>;
+  open: Event;
+  close: Event;
+  error: Event;
+};
+
+export type BaseStationClientEventListenerFor<
+  T,
+  K extends keyof BaseStationClientEventMap<T>,
+> =
+  | ((event: BaseStationClientEventMap<T>[K]) => void)
+  | { handleEvent(event: BaseStationClientEventMap<T>[K]): void };
+
+export type BaseStationClientRemoteMessageShape<T> =
+  | T
+  | ["station-client-request", string, T];
+
+export type BaseStationClientPendingTransact<T> = {
+  resolve: (message: T | false) => void;
+  reject: (reason?: unknown) => void;
+  cleanup: () => void;
+};
+
+export type BaseStationClientTransactOptions = {
+  signal?: AbortSignal;
+  ttlMs?: number;
+};

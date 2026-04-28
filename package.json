@@ -10,7 +10,7 @@
     "@sovereignbase/bytecodec": "^1.7.0",
     "@sovereignbase/cryptosuite": "^2.2.0",
     "chanfana": "^2.6.3",
-    "hono": "^4.6.20",
+    "hono": "^4.12.15",
     "stripe": "^22.0.1",
     "zod": "^3.24.1"
   },
