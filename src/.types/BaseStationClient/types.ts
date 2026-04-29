@@ -142,7 +142,7 @@ export type BaseStationClientMessageHandlerEventMap = {
   violation: string
 
   /**
-   * Emitted for validated encrypted resource backup requests.
+   * Emitted for validated (not authorized) encrypted resource backup requests.
    */
   cipherStorePut: {
     /**
@@ -152,6 +152,57 @@ export type BaseStationClientMessageHandlerEventMap = {
 
     /**
      * MessagePack-encoded encrypted resource backup payload.
+     */
+    buffer: Uint8Array<ArrayBuffer>
+
+    /**
+     * Bytes to verify
+     */
+    protectedBytes: Uint8Array
+
+    /**
+     * Write authorization.
+     */
+    authorization: ArrayBuffer
+  }
+  /**
+   * Emitted for validated encrypted resource backup requests.
+   */
+  cipherStoreCreate: {
+    /**
+     * Opaque resource identifier.
+     */
+    id: OpaqueIdentifier
+
+    /**
+     * MessagePack-encoded encrypted resource backup payload.
+     */
+    buffer: Uint8Array<ArrayBuffer>
+
+    /**
+     * Authorizes cipher store writes.
+     */
+    writerMac: Uint8Array<ArrayBuffer>
+
+    /**
+     * Authorizes cipher store management like key rotation etc.
+     */
+    managerMac: Uint8Array<ArrayBuffer>
+  }
+
+  cipherStoreRotate: {
+    /**
+     * Opaque resource identifier.
+     */
+    id: OpaqueIdentifier
+
+    /**
+     *
+     */
+    kind: 'writer' | 'manager'
+
+    /**
+     * MessagePack-encoded resource backup payload.
      */
     buffer: Uint8Array<ArrayBuffer>
 
