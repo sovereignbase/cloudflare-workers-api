@@ -1,8 +1,13 @@
 {
+  "type": "module",
+  "license": "Apache-2.0",
   "name": "@sovereignbase/base-station",
   "version": "0.0.1",
-  "type": "module",
-  "sideEffects": false,
+  "description": "",
+  "keywords": [
+    "typescript",
+    "sovereignbase"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,6 +34,7 @@
     "LICENSE",
     "README.md"
   ],
+  "sideEffects": false,
   "scripts": {
     "build": "tsup && typedoc && node in-browser-testing-build.js",
     "format": "prettier . --write"

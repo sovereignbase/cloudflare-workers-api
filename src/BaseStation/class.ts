@@ -1,4 +1,4 @@
-import { encode } from '@msgpack/msgpack'
+import { decode, encode } from '@msgpack/msgpack'
 import { DurableObject } from 'cloudflare:workers'
 import { BaseStationClientMessageHandler } from '../BaseStationClientMessageHandler/class.js'
 import {
@@ -9,6 +9,10 @@ import {
 } from '../.helpers/index.js'
 import { BaseStationMessage } from '../.types/types.js'
 import Stripe from 'stripe'
+import {
+  Cryptographic,
+  MessageAuthenticationKey,
+} from '@sovereignbase/cryptosuite'
 
 /**
  * Cloudflare Workers implementation of ANBS base station.
@@ -55,8 +59,31 @@ export class BaseStation extends DurableObject<Env> {
         //RESOURCE BACKUP HANDLER
         void BaseStationClientMessageHandler.addEventListener(
           'cipherStorePut',
-          ({ detail }) => {
-            void this.env.CIPHER_STORE.put(`/${detail.id}`, detail.buffer, {
+          async ({ detail }) => {
+            const { id, buffer, protectedBytes, authorization } = detail
+
+            const mac = await this.env.MACS.get(id)
+
+            if (!mac) return
+
+            const macBytes = await mac.arrayBuffer()
+
+            const macKey = (await decode(macBytes)) as MessageAuthenticationKey
+
+            const isAuthorized =
+              await Cryptographic.messageAuthentication.verify(
+                macKey,
+                protectedBytes,
+                authorization
+              )
+
+            if (!isAuthorized) {
+              void this.actor.close()
+              void this.rateLimitIP(this.ipAddress, 'Unauthorized write')
+              return
+            }
+
+            void this.env.CIPHER_STORE.put(`/${id}`, buffer, {
               httpMetadata: {
                 contentType: 'application/msgpack',
               },

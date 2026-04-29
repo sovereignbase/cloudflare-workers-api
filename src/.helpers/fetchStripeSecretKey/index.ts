@@ -13,15 +13,15 @@ let baseKey: Base64URLString | undefined
  *
  * @param env The Cloudflare Worker environment bindings.
  * @param ctx The Worker or Durable Object execution context used for cache writes.
- * @param clientId The opaque ANBS client identifier.
- * @returns The decrypted Stripe secret key, or `false` when it is unavailable.
+ * @param id The opaque ANBS client identifier.
+ * @returns The decrypted secret key, or `false` when it is unavailable.
  */
 export async function fetchStripeSecretKey(
   env: AppContext['env'],
   ctx: AppContext['executionCtx'] | DurableObjectState<{}>,
-  clientId: OpaqueIdentifier
+  id: OpaqueIdentifier
 ): Promise<string | false> {
-  const objectKey = `/stripe/${clientId}`
+  const objectKey = `/${id}`
 
   const speculativePromise = env.SECRETS.head(objectKey)
 
@@ -35,21 +35,21 @@ export async function fetchStripeSecretKey(
     ? Promise.resolve(baseKey)
     : await env.SUPER_SECRET_KEY.get()
 
-  let stripeSK: ArrayBuffer
+  let secretCT: ArrayBuffer
 
   const cached = await cache.match(cacheKey)
 
   if (cached) {
-    stripeSK = await cached.arrayBuffer()
+    secretCT = await cached.arrayBuffer()
   } else {
     if (!(await speculativePromise)) return false
 
     const object = await env.SECRETS.get(objectKey)
     if (!object) return false
 
-    stripeSK = await object.arrayBuffer()
+    secretCT = await object.arrayBuffer()
 
-    const response = new Response(stripeSK, {
+    const response = new Response(secretCT, {
       headers: {
         'content-type': 'application/msgpack',
         'cache-control': 'public, max-age=31536000, immutable',
@@ -62,7 +62,7 @@ export async function fetchStripeSecretKey(
   const resolvedBaseKey = (await baseKeyPromise) as Base64URLString
   if (!resolvedBaseKey) return false
 
-  const decoded = decode(stripeSK) as {
+  const decoded = decode(secretCT) as {
     iv: Uint8Array
     salt: Uint8Array
     ciphertext: ArrayBuffer

@@ -5,6 +5,7 @@ import type {
   BaseStationClientMessageHandlerEventMap,
   BaseStationClientMessageHandlerEventListenerFor,
 } from '../.types/types.js'
+import { Bytes } from '@sovereignbase/bytecodec'
 
 /**
  * ANBS base station client message event target.
@@ -29,7 +30,7 @@ export class BaseStationClientMessageHandler {
       return void this.eventTarget.dispatchEvent(
         new CustomEvent('violation', { detail: 'Wrong message encoding' })
       )
-    let decoded = undefined
+    let decoded: BaseStationClientMessage
 
     try {
       decoded = decode(message) as BaseStationClientMessage
@@ -55,77 +56,70 @@ export class BaseStationClientMessageHandler {
           !detail ||
           typeof detail !== 'object' ||
           !Object.hasOwn(detail, 'id') ||
-          !Object.hasOwn(detail, 'iv') ||
-          !Object.hasOwn(detail, 'salt') ||
-          !Object.hasOwn(detail, 'ciphertext')
+          !Object.hasOwn(detail, 'ciphertext') ||
+          !Object.hasOwn(detail, 'authorization')
         )
           return void this.eventTarget.dispatchEvent(
             new CustomEvent('violation', { detail: 'Wrong message shape' })
           )
-        const { id, iv, salt, ciphertext } = detail
+        const { id, iv, authorization, ciphertext } = detail
         if (
           !Cryptographic.identifier.validate(id) ||
           !(iv instanceof Uint8Array) ||
-          !(salt instanceof Uint8Array) ||
-          !(ciphertext instanceof ArrayBuffer)
+          !(ciphertext instanceof ArrayBuffer) ||
+          !(authorization instanceof ArrayBuffer)
         )
           return void this.eventTarget.dispatchEvent(
             new CustomEvent('violation', { detail: 'Wrong message shape' })
           )
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('resourceBackup', {
-            detail: { id, buffer: encode({ iv, salt, ciphertext }) },
+          new CustomEvent('cipherStorePut', {
+            detail: {
+              id,
+              buffer: encode({ iv, ciphertext }),
+              protectedBytes: Bytes.toUint8Array(ciphertext),
+              authorization,
+            },
           })
         )
       }
       case 'iceServersGet': {
-        const detail = Object.hasOwn(decoded, 'detail') ? decoded.detail : {}
-        if (
-          !detail ||
-          typeof detail !== 'object' ||
-          (detail.id !== undefined && typeof detail.id !== 'string')
-        )
+        const { id, detail } = decoded
+        if (typeof id !== 'string' || typeof detail !== 'object')
           return void this.eventTarget.dispatchEvent(
             new CustomEvent('violation', { detail: 'Wrong message shape' })
           )
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('iceServersGet', { detail })
+          new CustomEvent('iceServersGet', { detail: { id } })
         )
       }
       case 'invoiceStatusGet': {
-        const { detail } = decoded
-        if (
-          !detail ||
-          typeof detail !== 'object' ||
-          !Object.hasOwn(detail, 'invoiceId') ||
-          typeof detail.invoiceId !== 'string' ||
-          (detail.id !== undefined && typeof detail.id !== 'string')
-        )
+        const { id, detail } = decoded
+        if (typeof id !== 'string' || typeof detail !== 'object')
           return void this.eventTarget.dispatchEvent(
             new CustomEvent('violation', { detail: 'Wrong message shape' })
           )
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('invoiceStatusGet', { detail })
+          new CustomEvent('invoiceStatusGet', {
+            detail: { id, invoiceId: detail.invoiceId },
+          })
         )
       }
+
       case 'checkoutStatusGet': {
-        const { detail } = decoded
-        if (
-          !detail ||
-          typeof detail !== 'object' ||
-          !Object.hasOwn(detail, 'checkoutSessionId') ||
-          typeof detail.checkoutSessionId !== 'string' ||
-          (detail.id !== undefined && typeof detail.id !== 'string')
-        )
+        const { id, detail } = decoded
+        if (typeof id !== 'string' || typeof detail !== 'object')
           return void this.eventTarget.dispatchEvent(
             new CustomEvent('violation', { detail: 'Wrong message shape' })
           )
 
         return void this.eventTarget.dispatchEvent(
-          new CustomEvent('checkoutStatusGet', { detail })
+          new CustomEvent('checkoutStatusGet', {
+            detail: { id, checkoutSessionId: detail.checkoutSessionId },
+          })
         )
       }
     }

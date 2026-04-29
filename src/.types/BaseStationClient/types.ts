@@ -28,14 +28,14 @@ export type BaseStationClientMessage =
         iv: Uint8Array
 
         /**
-         * Key derivation salt.
-         */
-        salt: Uint8Array
-
-        /**
          * Encrypted resource bytes.
          */
         ciphertext: ArrayBuffer
+
+        /**
+         * Write authorization.
+         */
+        authorization: ArrayBuffer
       }
     }
   | {
@@ -154,6 +154,16 @@ export type BaseStationClientMessageHandlerEventMap = {
      * MessagePack-encoded encrypted resource backup payload.
      */
     buffer: Uint8Array<ArrayBuffer>
+
+    /**
+     * Bytes to verify
+     */
+    protectedBytes: Uint8Array
+
+    /**
+     * Write authorization.
+     */
+    authorization: ArrayBuffer
   }
 
   /**

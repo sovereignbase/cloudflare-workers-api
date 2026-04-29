@@ -68,6 +68,12 @@
       "binding": "SECRETS",
       "bucket_name": "secrets",
       "jurisdiction": "eu"
+    },
+    {
+      "remote": true,
+      "binding": "MACS",
+      "bucket_name": "macs",
+      "jurisdiction": "eu"
     }
   ]
 }
